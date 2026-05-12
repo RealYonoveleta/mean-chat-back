@@ -1,4 +1,4 @@
-const jwt = require("jsonwebtoken");
+const { verifyAccessToken } = require("../utils/tokenUtils");
 
 module.exports = function auth(req, res, next) {
     const authHeader = req.headers.authorization;
@@ -16,7 +16,7 @@ module.exports = function auth(req, res, next) {
     }
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = verifyAccessToken(token);
 
         // Attach the decoded payload to req.user
         req.user = decoded;

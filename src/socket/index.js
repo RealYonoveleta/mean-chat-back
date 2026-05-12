@@ -9,7 +9,6 @@ const eventModules = [
 
 function registerModules(socket, io) {
     eventModules.forEach(({ name, module }) => {
-        console.log(`Registering ${name}`);
         module(socket, io);
     });
 }
