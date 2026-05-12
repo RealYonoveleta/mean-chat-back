@@ -65,6 +65,8 @@ paths:
               required:
                 - username
                 - password
+                - name
+                - email
               properties:
                 username:
                   type: string
@@ -72,11 +74,78 @@ paths:
                 password:
                   type: string
                   example: secretpass
+                name:
+                  type: string
+                  example: John
+                surname:
+                  type: string
+                  example: Doe
+                email:
+                  type: string
+                  example: john@example.com
       responses:
         "201":
           description: User registered successfully
         "400":
-          description: Username already exists
+          description: Username already exists or Email already in use
+        "500":
+          description: Server error
+
+  /auth/me:
+    get:
+      summary: Get current user profile
+      tags: [Auth]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user info from token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: string
+                  username:
+                    type: string
+                  name:
+                    type: string
+                  surname:
+                    type: string
+                  email:
+                    type: string
+        "401":
+          description: Unauthorized
+
+  /auth/users:
+    get:
+      summary: Get all users except current user
+      tags: [Auth]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    _id:
+                      type: string
+                    username:
+                      type: string
+                    name:
+                      type: string
+                    surname:
+                      type: string
+                    email:
+                      type: string
+        "401":
+          description: Unauthorized
         "500":
           description: Server error
 
@@ -117,3 +186,88 @@ paths:
           description: Bad request
         "500":
           description: Server error
+
+    get:
+      summary: Get all chats for the current user
+      tags: [Chat]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of chats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    _id:
+                      type: string
+                    name:
+                      type: string
+                    isGroup:
+                      type: boolean
+                    members:
+                      type: array
+                      items:
+                        type: object
+                    lastMessage:
+                      type: string
+                    createdAt:
+                      type: string
+                    updatedAt:
+                      type: string
+        "401":
+          description: Unauthorized
+        "500":
+          description: Server error
+
+  /chat/{id}/messages:
+    get:
+      summary: Get paginated messages for a chat
+      tags: [Chat]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Chat MongoDB ObjectId
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 30
+      responses:
+        "200":
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    _id:
+                      type: string
+                    chat:
+                      type: string
+                    sender:
+                      type: object
+                    content:
+                      type: string
+                    createdAt:
+                      type: string
+        "401":
+          description: Unauthorized
+        "500":
+          description: Server error
+

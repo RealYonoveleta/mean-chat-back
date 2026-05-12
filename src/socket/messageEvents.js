@@ -1,12 +1,13 @@
 const Message = require("../models/Message");
+const Chat = require("../models/Chat");
 
 module.exports = (socket, io) => {
-    socket.on("chat-message", async (message) => {
+    socket.on("chat-message", async (content) => {
         const chatId = socket.chatId;
-        const sender = socket.user.username;
         const senderId = socket.user.userId;
-        
-        if (!chatId || !sender || !senderId || !message) {
+        const senderUsername = socket.user.username;
+
+        if (!chatId || !senderId || !content) {
             return socket.emit("error", "Invalid message payload or not in a chat");
         }
 
@@ -14,16 +15,26 @@ module.exports = (socket, io) => {
             const newMessage = await Message.create({
                 chat: chatId,
                 sender: senderId,
-                content: message
+                content
             });
 
-            console.log(`Message from ${sender} in ${chatId}: ${message}`);
+            await newMessage.populate("sender", "-passwordHash -__v");
 
-            // Emit to other users in the room
-            socket.to(chatId).emit("chat-message", {
-                sender,
-                message,
-                timestamp: newMessage.createdAt,
+            // Update chat lastMessage and updatedAt
+            await Chat.findByIdAndUpdate(chatId, {
+                lastMessage: `${senderUsername}: ${content}`,
+                updatedAt: new Date()
+            });
+
+            console.log(`Message from ${senderUsername} in ${chatId}: ${content}`);
+
+            // Emit to ALL users in the room including the sender
+            io.to(chatId).emit("chat-message", {
+                _id: newMessage._id,
+                chat: chatId,
+                sender: newMessage.sender,
+                content: newMessage.content,
+                createdAt: newMessage.createdAt,
             });
         } catch (err) {
             console.error("Error saving message:", err);

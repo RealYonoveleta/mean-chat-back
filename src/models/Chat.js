@@ -7,7 +7,9 @@ const chatSchema = new mongoose.Schema({
         validate: [arr => arr.length > 1, "Chat must have at least 2 members"]
     },
     name: String, // Only for groups
-    createdAt: { type: Date, default: Date.now }
+    lastMessage: { type: String, default: '' },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
 });
 
 chatSchema.index({ members: 1 });
