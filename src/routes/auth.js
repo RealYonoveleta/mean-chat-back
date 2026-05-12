@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
 const auth = require("../middleware/auth");
+const jwt = require("jsonwebtoken");
 
 // Register new User
 router.post("/register", async (req, res) => {
@@ -53,7 +54,7 @@ router.post("/login", async (req, res) => {
             { expiresIn: "1h" }
         );
 
-        res.json({ accessToken });
+        res.json({ token });
 
     } catch (err) {
         console.error(err);

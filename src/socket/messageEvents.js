@@ -2,10 +2,14 @@ const Message = require("../models/Message");
 const Chat = require("../models/Chat");
 
 module.exports = (socket, io) => {
-    socket.on("chat-message", async (content) => {
+    socket.on("chat-message", async (payload) => {
         const chatId = socket.chatId;
         const senderId = socket.user.userId;
         const senderUsername = socket.user.username;
+
+        // Accept plain string (legacy) or { content, type } object
+        const content = (typeof payload === "object" && payload !== null) ? payload.content : payload;
+        const type = (typeof payload === "object" && payload !== null && payload.type) ? payload.type : "text";
 
         if (!chatId || !senderId || !content) {
             return socket.emit("error", "Invalid message payload or not in a chat");
@@ -15,14 +19,16 @@ module.exports = (socket, io) => {
             const newMessage = await Message.create({
                 chat: chatId,
                 sender: senderId,
-                content
+                content,
+                type
             });
 
             await newMessage.populate("sender", "-passwordHash -__v");
 
             // Update chat lastMessage and updatedAt
+            const lastMessageText = type === "location" ? `${senderUsername}: 📍 Location` : `${senderUsername}: ${content}`;
             await Chat.findByIdAndUpdate(chatId, {
-                lastMessage: `${senderUsername}: ${content}`,
+                lastMessage: lastMessageText,
                 updatedAt: new Date()
             });
 
@@ -34,6 +40,7 @@ module.exports = (socket, io) => {
                 chat: chatId,
                 sender: newMessage.sender,
                 content: newMessage.content,
+                type: newMessage.type,
                 createdAt: newMessage.createdAt,
             });
         } catch (err) {

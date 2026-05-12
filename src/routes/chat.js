@@ -52,6 +52,19 @@ module.exports = (io) => {
         }
     });
 
+    // Get a single chat by ID
+    router.get("/:id", async (req, res) => {
+        try {
+            const chat = await Chat.findOne({ _id: req.params.id, members: req.user.userId })
+                .populate("members", "-passwordHash -__v");
+            if (!chat) return res.status(404).json({ error: "Chat not found" });
+            res.json(chat);
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: "Server error" });
+        }
+    });
+
     // Get paginated messages for a chat
     router.get("/:id/messages", async (req, res) => {
         try {
