@@ -10,6 +10,14 @@ module.exports = (socket, io) => {
                 return socket.emit("error", "Chat not found");
             }
 
+            // Verify the requesting user is a member of this chat
+            const isMember = chat.members.some(
+                (memberId) => memberId.toString() === socket.user.userId.toString()
+            );
+            if (!isMember) {
+                return socket.emit("error", "Access denied");
+            }
+
             // Join the socket.io room named after the chat
             socket.join(chatId);
             socket.chatId = chatId;

@@ -73,6 +73,9 @@ module.exports = (io) => {
             const limit = parseInt(req.query.limit) || 30;
             const skip = (page - 1) * limit;
 
+            const chat = await Chat.findOne({ _id: id, members: req.user.userId });
+            if (!chat) return res.status(404).json({ error: "Chat not found" });
+
             const messages = await Message.find({ chat: id })
                 .populate("sender", "-passwordHash -__v")
                 .sort({ createdAt: -1 })
