@@ -6,6 +6,7 @@ require("dns").setDefaultResultOrder("ipv4first");
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
+const rateLimit = require("express-rate-limit");
 const mongoose = require("mongoose");
 const { Server } = require("socket.io");
 const path = require("path");
@@ -29,10 +30,13 @@ mongoose
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
+// Allowed origin (set FRONTEND_URL in .env for production)
+const allowedOrigin = process.env.FRONTEND_URL || "*";
+
 // Socket.io config
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: allowedOrigin,
     methods: ["GET", "POST"],
   },
 });
@@ -40,13 +44,22 @@ const io = new Server(server, {
 // Set up socket logic
 socketHandler(io);
 
+// Rate limiter for auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests, please try again later" },
+});
+
 // Middleware
-app.use(cors({ origin: "*" }));
+app.use(cors({ origin: allowedOrigin }));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json());
 
 // Routing
-app.use("/auth", authRouter);
+app.use("/auth", authLimiter, authRouter);
 app.use("/chat", chatRouterFactory(io));
 
 // Swagger

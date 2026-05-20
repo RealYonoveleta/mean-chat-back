@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
 const auth = require("../middleware/auth");
-const jwt = require("jsonwebtoken");
+const { generateAccessToken } = require("../utils/tokenUtils");
 
 // Register new User
 router.post("/register", async (req, res) => {
@@ -48,11 +48,7 @@ router.post("/login", async (req, res) => {
         if (!validPassword) return res.status(401).json({ error: "Invalid username or password" });
 
         // Create JWT Token
-        const token = jwt.sign(
-            { userId: user._id, username: user.username, name: user.name, surname: user.surname, email: user.email },
-            process.env.JWT_SECRET,
-            { expiresIn: "1h" }
-        );
+        const token = generateAccessToken(user);
 
         res.json({ token });
 
