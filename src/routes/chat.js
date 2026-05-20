@@ -75,7 +75,7 @@ module.exports = (io) => {
 
             const messages = await Message.find({ chat: id })
                 .populate("sender", "-passwordHash -__v")
-                .sort({ createdAt: 1 })
+                .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit);
 

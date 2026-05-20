@@ -27,10 +27,23 @@ module.exports = (socket, io) => {
 
             // Update chat lastMessage and updatedAt
             const lastMessageText = type === "location" ? `${senderUsername}: 📍 Location` : `${senderUsername}: ${content}`;
-            await Chat.findByIdAndUpdate(chatId, {
+            const updatedChat = await Chat.findByIdAndUpdate(chatId, {
                 lastMessage: lastMessageText,
                 updatedAt: new Date()
-            });
+            }, { new: true });
+
+            // Notify all members so their chat list updates in real-time
+            if (updatedChat) {
+                updatedChat.members.forEach((memberId) => {
+                    const memberSockets = [...io.sockets.sockets.values()]
+                        .filter((s) => s.user?.userId?.toString() === memberId.toString());
+                    memberSockets.forEach((s) => s.emit("chat-updated", {
+                        _id: chatId,
+                        lastMessage: lastMessageText,
+                        updatedAt: updatedChat.updatedAt,
+                    }));
+                });
+            }
 
             console.log(`Message from ${senderUsername} in ${chatId}: ${content}`);
 
