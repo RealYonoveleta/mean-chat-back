@@ -11,10 +11,6 @@ const mongoose = require("mongoose");
 const { Server } = require("socket.io");
 const path = require("path");
 const socketHandler = require("./src/socket");
-const YAML = require("yamljs");
-
-// Swagger
-const swaggerUI = require("swagger-ui-express");
 
 // Routes
 const authRouter = require("./src/routes/auth");
@@ -62,9 +58,17 @@ app.use(express.json());
 app.use("/auth", authLimiter, authRouter);
 app.use("/chat", chatRouterFactory(io));
 
-// Swagger
-const swaggerDocument = YAML.load(path.join(__dirname, "swagger.yaml"));
-app.use("/api-docs", swaggerUI.serve, swaggerUI.setup(swaggerDocument));
+// Swagger (dev-only)
+if (process.env.NODE_ENV !== "production") {
+  try {
+    const swaggerUI = require("swagger-ui-express");
+    const YAML = require("yamljs");
+    const swaggerDocument = YAML.load(path.join(__dirname, "swagger.yaml"));
+    app.use("/api-docs", swaggerUI.serve, swaggerUI.setup(swaggerDocument));
+  } catch (err) {
+    console.warn("Swagger modules not installed; skipping /api-docs");
+  }
+}
 
 // Start server
 const PORT = process.env.PORT || 3000;
