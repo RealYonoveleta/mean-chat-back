@@ -1,8 +1,35 @@
 const express = require("express");
 const router = express.Router();
+const crypto = require("crypto");
 const User = require("../models/User");
+const RefreshToken = require("../models/RefreshToken");
 const auth = require("../middleware/auth");
-const { generateAccessToken } = require("../utils/tokenUtils");
+const { generateAccessToken, generateRefreshToken, verifyRefreshToken } = require("../utils/tokenUtils");
+
+function hashToken(token) {
+    return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+async function issueTokens(user, tokenToRotate = null) {
+    const token = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+    const refreshPayload = verifyRefreshToken(refreshToken);
+    const tokenHash = hashToken(refreshToken);
+
+    await RefreshToken.create({
+        user: user._id,
+        tokenHash,
+        expiresAt: new Date(refreshPayload.exp * 1000)
+    });
+
+    if (tokenToRotate) {
+        tokenToRotate.revokedAt = new Date();
+        tokenToRotate.replacedByTokenHash = tokenHash;
+        await tokenToRotate.save();
+    }
+
+    return { token, refreshToken };
+}
 
 // Register new User
 router.post("/register", async (req, res) => {
@@ -47,14 +74,69 @@ router.post("/login", async (req, res) => {
         const validPassword = await user.isValidPassword(password);
         if (!validPassword) return res.status(401).json({ error: "Invalid username or password" });
 
-        // Create JWT Token
-        const token = generateAccessToken(user);
+        const tokens = await issueTokens(user);
 
-        res.json({ token });
+        res.json(tokens);
 
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Server error" });
+    }
+});
+
+// Rotate refresh token and issue a new access token
+router.post("/refresh", async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+
+        if (!refreshToken) {
+            return res.status(400).json({ error: "refreshToken is required" });
+        }
+
+        let payload;
+        try {
+            payload = verifyRefreshToken(refreshToken);
+        } catch {
+            return res.status(401).json({ error: "Invalid or expired refresh token" });
+        }
+
+        const tokenHash = hashToken(refreshToken);
+        const storedToken = await RefreshToken.findOne({ tokenHash }).populate("user");
+
+        if (!storedToken || storedToken.revokedAt || storedToken.expiresAt <= new Date()) {
+            return res.status(401).json({ error: "Invalid or expired refresh token" });
+        }
+
+        if (storedToken.user._id.toString() !== payload.userId) {
+            return res.status(401).json({ error: "Invalid refresh token" });
+        }
+
+        const tokens = await issueTokens(storedToken.user, storedToken);
+        return res.json(tokens);
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Server error" });
+    }
+});
+
+router.post("/logout", async (req, res) => {
+    try {
+        const { refreshToken } = req.body || {};
+
+        if (!refreshToken) {
+            return res.status(204).send();
+        }
+
+        const tokenHash = hashToken(refreshToken);
+        await RefreshToken.findOneAndUpdate(
+            { tokenHash, revokedAt: null },
+            { revokedAt: new Date() }
+        );
+
+        return res.status(204).send();
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Server error" });
     }
 });
 

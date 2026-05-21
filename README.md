@@ -114,6 +114,8 @@ Auth routes:
 
 - POST /auth/register
 - POST /auth/login
+- POST /auth/refresh
+- POST /auth/logout
 - GET /auth/me
 - GET /auth/users
 
@@ -125,6 +127,11 @@ Chat routes:
 - GET /chat/:id/messages?page=1&limit=30
 
 All /chat routes require Bearer token auth.
+
+Authentication notes:
+
+- Access tokens expire in 1 hour.
+- Refresh tokens are rotated on every /auth/refresh call.
 
 ## Socket Events Summary
 
