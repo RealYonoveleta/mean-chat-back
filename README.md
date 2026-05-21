@@ -1,67 +1,160 @@
-# 💬 MEAN Chat App
+# Mean Chat Backend
 
-![CI](https://github.com/Yonoveleta/mean-chat-backend/actions/workflows/ci.yml/badge.svg)
-![License](https://img.shields.io/github/license/Yonoveleta/mean-chat-backend)
+Backend service for the Mean Chat app.
 
+Stack:
 
-A real-time chat application built with the **MEAN stack** (MongoDB, Express, Angular, Node.js) and **Socket.io**.  
-This project simulates modern chat features such as private chats, group chats, and real-time messaging.
+- Node.js + Express
+- MongoDB + Mongoose
+- Socket.IO for realtime chat
+- JWT authentication
 
----
+## Features
 
-## 🚀 Features
+- User registration and login
+- JWT-protected routes
+- Create private/group chats
+- Fetch chats and paginated message history
+- Realtime messaging events via Socket.IO
+- Chat list realtime updates (chat-created and chat-updated)
 
-- Real-time messaging with **Socket.io**.
-- User authentication with **JWT tokens**.
-- Support for **private chats** (2 participants) and **group chats**.
-- MongoDB database with **Mongoose** schemas.
-- Swagger API documentation for backend routes.
-- Future-ready design for **roles and permissions** (like Discord).
+## BBDD Diagram
 
----
+```mermaid
+erDiagram
+  USER {
+    ObjectId _id
+    string username "unique"
+    string email "unique"
+    string passwordHash
+    string name
+    string surname
+  }
 
-## 📂 Project Structure
+  CHAT {
+    ObjectId _id
+    boolean isGroup
+    ObjectId[] members
+    string name
+    string lastMessage
+    date createdAt
+    date updatedAt
+  }
 
-mean-chat-backend/
-- **server.js** — Entry point (Express + Socket.io init)
-- **sockets/**
-  - `index.js` — Main socket loader (registerModules)
-  - `userEvents.js` — User-related socket events
-  - `messageEvents.js` — Messaging events
-  - `roomEvents.js` — Room join/leave events
-  - `disconnectEvents.js` — Cleanup + leave notifications
-- **routes/**
-  - `auth.js` — REST auth routes
-- **models/**
-  - `User.js`
-  - `Chat.js`
-  - `Message.js`
-- **public/** — Temporary frontend testing files
-- **test/** — Jest tests (optional for now)
-- **data-model.md** — Mermaid ER diagram
-- **package.json**
-- **README.md**
+  MESSAGE {
+    ObjectId _id
+    ObjectId chat
+    ObjectId sender
+    mixed content
+    string type "text|location"
+    date createdAt
+  }
 
-## 🗃️ Database Schema
+  USER }o--o{ CHAT : member_of
+  CHAT ||--o{ MESSAGE : contains
+  USER ||--o{ MESSAGE : sends
+```
 
-The database is MongoDB with collections for Users, Chats, and Messages.  
+## Project Structure
 
-See the full [Database Model](db-model.md) for details.
+- server.js: app entry point (Express, Socket.IO, Mongo connection)
+- src/routes:
+  - auth.js
+  - chat.js
+- src/models:
+  - User.js
+  - Chat.js
+  - Message.js
+- src/socket:
+  - index.js
+  - chatEvents.js
+  - messageEvents.js
+  - disconnectEvents.js
+  - userEvents.js (currently placeholder)
+- src/middleware:
+  - auth.js
+- src/utils:
+  - tokenUtils.js
 
-## 📄 API Documentation
+## Scripts
 
-Swagger UI is available at: http://localhost:3000/api-docs
+```bash
+npm run dev
+npm run start
+npm run test
+```
 
-It documents all backend routes and expected request/response formats.
+## Local Setup
 
-## ⚙️ Tech Stack
+1. Install dependencies:
 
-- **Backend:** Node.js, Express, Socket.io
-- **Database:** MongoDB, Mongoose
-- **Frontend (testing):** Plain HTML + JS (Angular planned)
-- **Documentation:** Swagger UI
-- **Diagramming:** Mermaid (ER diagram)
+```bash
+npm install
+```
 
-## 👨‍💻 Author
+2. Create .env in this folder (mean-chat-back/.env):
 
-Jonás Martínez Cuesta
+```env
+PORT=3000
+MONGO_URI=mongodb://localhost:27017/mean-chat
+JWT_SECRET=<your-secret>
+JWT_REFRESH_SECRET=<your-refresh-secret>
+FRONTEND_URL=http://localhost:4200
+```
+
+3. Start development server:
+
+```bash
+npm run dev
+```
+
+## API Summary
+
+Auth routes:
+
+- POST /auth/register
+- POST /auth/login
+- GET /auth/me
+- GET /auth/users
+
+Chat routes:
+
+- POST /chat
+- GET /chat
+- GET /chat/:id
+- GET /chat/:id/messages?page=1&limit=30
+
+All /chat routes require Bearer token auth.
+
+## Socket Events Summary
+
+Incoming events:
+
+- join-chat ({ chatId })
+- leave-chat
+- chat-message (string or { content, type })
+
+Outgoing events:
+
+- chat-created
+- chat-updated
+- chat-message
+- user-joined
+- user-left
+
+## Swagger
+
+- Available at /api-docs only when NODE_ENV is not production.
+- In Docker production-mode backend, /api-docs is expected to return 404.
+
+## Docker
+
+- Dockerfile builds production runtime with npm ci --omit=dev.
+- In compose, backend receives:
+  - MONGO_URI=mongodb://mongo:27017/mean-chat
+  - NODE_ENV=production
+
+## Notes
+
+- userEvents.js is currently empty by design and can be used for future presence/user-specific realtime logic.
+- Current rate limiting is applied to /auth routes.
