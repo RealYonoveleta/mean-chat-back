@@ -13,6 +13,7 @@ Stack:
 
 - User registration and login
 - JWT-protected routes
+- Refresh token rotation and token revocation on logout
 - Create private/group chats
 - Fetch chats and paginated message history
 - Realtime messaging events via Socket.IO
@@ -65,6 +66,7 @@ erDiagram
   - User.js
   - Chat.js
   - Message.js
+  - RefreshToken.js
 - src/socket:
   - index.js
   - chatEvents.js
@@ -131,7 +133,9 @@ All /chat routes require Bearer token auth.
 Authentication notes:
 
 - Access tokens expire in 1 hour.
+- Refresh tokens expire in 7 days.
 - Refresh tokens are rotated on every /auth/refresh call.
+- /auth/logout revokes the current refresh token.
 
 ## Socket Events Summary
 
